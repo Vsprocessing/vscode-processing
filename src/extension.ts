@@ -30,6 +30,9 @@ const referenceViewType = 'webprocessing.reference';
 const assignmentBrowserViewType = 'webprocessing.assignments';
 const defaultOpenStateKey = 'webprocessing.defaultOpen.v1';
 const defaultAssignmentStoreUrls = ['https://vsp-cspt-store.cloudtron.us/'];
+// Temporarily hidden features; set to true to re-enable their UI.
+const assignmentsEnabled = false;
+const exportWebsiteEnabled = false;
 
 type ProcessingModule = typeof processingCompilerPackage;
 type CompilerModule = typeof javaCompilerPackage;
@@ -56,6 +59,8 @@ interface ExtensionState {
 interface ExtensionControlsViewState extends ExtensionState {
 	readonly status: string;
 	readonly warning: string;
+	readonly assignmentsEnabled: boolean;
+	readonly exportWebsiteEnabled: boolean;
 }
 
 interface AssignmentCatalogItem {
@@ -208,9 +213,13 @@ class Extension implements vscode.Disposable {
 		this.disposables.push(vscode.workspace.onDidChangeTextDocument(() => this.refreshState()));
 		this.disposables.push(vscode.workspace.onDidDeleteFiles(() => this.refreshState()));
 		this.disposables.push(vscode.workspace.onDidCreateFiles(() => this.refreshState()));
+		void vscode.commands.executeCommand('setContext', 'webprocessing.assignmentsEnabled', assignmentsEnabled);
+		void vscode.commands.executeCommand('setContext', 'webprocessing.exportWebsiteEnabled', exportWebsiteEnabled);
 		void this.refreshState();
 		void this.openControlView();
-		void this.loadAssignmentCatalog();
+		if (assignmentsEnabled) {
+			void this.loadAssignmentCatalog();
+		}
 	}
 
 	dispose(): void {
@@ -1181,6 +1190,8 @@ class ExtensionControlsProvider implements vscode.WebviewViewProvider {
 			...state,
 			status,
 			warning: state.hasCompiled && state.isOutdated ? 'Warning: outdated executable.' : '',
+			assignmentsEnabled,
+			exportWebsiteEnabled,
 		};
 	}
 

@@ -1,0 +1,16 @@
+submodules/**
+src/**
+out/**
+node_modules/**
+dist/extension.js
+**/*.map
+**/*.ts
+**/*.mts
+tsconfig*.json
+*.tsbuildinfo
+.gitignore
+package-lock.json
+pnpm-lock.yaml
+pnpm-workspace.yaml
+.gitmodules
+.env

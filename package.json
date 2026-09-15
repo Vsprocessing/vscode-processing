@@ -110,6 +110,7 @@
         {
           "id": "webprocessing.assignments",
           "name": "%view.assignments.name%",
+          "when": "webprocessing.assignmentsEnabled",
           "type": "webview",
           "visibility": "visible"
         }
@@ -193,7 +194,7 @@
         },
         {
           "command": "webprocessing.exportWebsite",
-          "when": "workspaceFolderCount != 0 && !webprocessing.isCompiling && !webprocessing.isRunning"
+          "when": "webprocessing.exportWebsiteEnabled && workspaceFolderCount != 0 && !webprocessing.isCompiling && !webprocessing.isRunning"
         },
         {
           "command": "webprocessing.openReference"
@@ -203,12 +204,16 @@
         },
         {
           "command": "webprocessing.openReferenceSheet"
+        },
+        {
+          "command": "webprocessing.refreshAssignments",
+          "when": "webprocessing.assignmentsEnabled"
         }
       ],
       "view/title": [
         {
           "command": "webprocessing.refreshAssignments",
-          "when": "view == webprocessing.assignments",
+          "when": "webprocessing.assignmentsEnabled && view == webprocessing.assignments",
           "group": "navigation"
         }
       ]

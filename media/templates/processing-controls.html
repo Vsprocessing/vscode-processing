@@ -87,6 +87,9 @@
 			opacity: 0.4;
 			cursor: default;
 		}
+		[hidden] {
+			display: none !important;
+		}
 		.status, .warning {
 			color: var(--vscode-descriptionForeground);
 			font-size: 11px;
@@ -114,8 +117,8 @@
 			<div id="warning" class="warning"></div>
 		</div>
 		<div class="bottom">
-			<button id="browseAssignments" class="secondary" type="button">Browse Assignments</button>
-			<button id="exportWebsite" class="secondary" type="button">Export Website</button>
+			<button id="browseAssignments" class="secondary" type="button" hidden>Browse Assignments</button>
+			<button id="exportWebsite" class="secondary" type="button" hidden>Export Website</button>
 			<button id="processingReference" class="secondary" type="button">Open Processing Reference</button>
 			<button id="apcsaReference" class="secondary" type="button">Open APCSA Reference</button>
 		</div>
@@ -170,6 +173,8 @@
 			setDisabled(buttons.run, !state.hasSources || !state.hasCompiled || state.isCompiling || state.isRunning);
 			setDisabled(buttons.stop, !state.isRunning);
 			setDisabled(buttons.exportWebsite, state.mode !== 'processing' || !state.hasSources || state.isCompiling || state.isRunning);
+			setHidden(buttons.browseAssignments, !state.assignmentsEnabled);
+			setHidden(buttons.exportWebsite, !state.exportWebsiteEnabled);
 			setText(status, state.status || '');
 			setText(warning, state.warning || '');
 			setHidden(warning, !state.warning);
