@@ -202,11 +202,29 @@ public class ${t} {
 		const info = document.getElementById('info');
 		const showInfo = document.getElementById('showInfo');
 		if (info && showInfo) {
+			// close() is delayed so the closing animation can play
+			const dismiss = () => {
+				info.classList.add('closing');
+				const done = () => {
+					info.classList.remove('closing');
+					info.close();
+				};
+				const animations = info.getAnimations();
+				if (animations.length) {
+					Promise.all(animations.map(animation => animation.finished.catch(() => undefined))).then(done);
+				} else {
+					done();
+				}
+			};
 			showInfo.addEventListener('click', () => info.showModal());
 			info.addEventListener('click', event => {
 				if (event.target === info) {
-					info.close();
+					dismiss();
 				}
+			});
+			info.addEventListener('cancel', event => {
+				event.preventDefault();
+				dismiss();
 			});
 		}
 	}
@@ -402,6 +420,7 @@ public class ${t} {
 			min-height: 0;
 		}
 		#stage {
+			position: relative;
 			display: grid;
 			place-items: center;
 			min-height: 0;
@@ -430,19 +449,42 @@ public class ${t} {
 			font: 12px/1.45 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 		}
 		dialog#info {
-			max-width: 420px;
-			padding: 20px;
+			width: min(560px, 92vw);
+			min-height: min(320px, 70vh);
+			max-height: 86vh;
+			padding: 28px 30px;
 			border: 1px solid var(--border-color);
-			border-radius: 10px;
+			border-radius: 14px;
 			background: var(--page-background);
 			color: var(--page-foreground);
+			box-shadow: 0 24px 60px rgba(0, 0, 0, .35);
 		}
+		dialog#info[open] {
+			display: flex;
+			flex-direction: column;
+			animation: dialog-in .2s cubic-bezier(.2, .7, .3, 1) both;
+		}
+		dialog#info[open]::backdrop { animation: backdrop-in .2s ease-out both; }
+		dialog#info.closing { animation: dialog-out .14s ease-in both; }
+		dialog#info.closing::backdrop { animation: backdrop-in .14s ease-in reverse both; }
 		dialog#info::backdrop { background: rgba(0, 0, 0, .45); }
-		dialog#info h2 { margin: 0; font-size: 18px; }
+		dialog#info h2 { margin: 0; font-size: 22px; }
+		@keyframes dialog-in {
+			from { opacity: 0; transform: translateY(12px) scale(.96); }
+			to { opacity: 1; transform: translateY(0) scale(1); }
+		}
+		@keyframes dialog-out {
+			to { opacity: 0; transform: translateY(8px) scale(.98); }
+		}
+		@keyframes backdrop-in {
+			from { opacity: 0; }
+			to { opacity: 1; }
+		}
 		dialog#info .by { display: block; margin-top: 2px; }
-		dialog#info p { margin: 14px 0 0; line-height: 1.5; white-space: pre-wrap; }
+		dialog#info p { margin: 18px 0 0; line-height: 1.6; white-space: pre-wrap; }
+		dialog#info .description { flex: 1; }
 		dialog#info .made {
-			margin-top: 18px;
+			margin-top: 20px;
 			padding-top: 12px;
 			border-top: 1px solid var(--border-color);
 			color: var(--muted-foreground);
@@ -450,24 +492,24 @@ public class ${t} {
 		}
 		dialog#info a { color: inherit; }
 		#boot {
-			position: fixed;
+			position: absolute;
 			inset: 0;
-			z-index: 10;
+			z-index: 2;
 			display: flex;
 			align-items: center;
 			justify-content: center;
 			background: #000;
 			color: #fff;
 		}
-		#boot.done { animation: boot-out .1s ease-in forwards; }
-		#boot svg { width: 52px; height: 52px; flex: none; animation: boot-logo .16s ease-out both; }
+		#boot.done { animation: boot-out .16s ease-in forwards; }
+		#boot svg { width: 46px; height: 46px; flex: none; animation: boot-logo .2s ease-out both; }
 		#boot .wordmark {
 			/* Expands to the right, which pushes the logo left into its final position. */
 			overflow: hidden;
 			white-space: nowrap;
-			font-size: 26px;
+			font-size: 23px;
 			font-weight: 600;
-			animation: boot-wordmark .24s cubic-bezier(.2, .7, .3, 1) .16s both;
+			animation: boot-wordmark .3s cubic-bezier(.2, .7, .3, 1) .2s both;
 		}
 		@keyframes boot-logo {
 			from { opacity: 0; transform: scale(.9); }
@@ -487,10 +529,6 @@ public class ${t} {
 	<meta name="webprocessing-export" content="${i}">
 </head>
 <body>
-	<div id="boot">
-		${pa}
-		<span class="wordmark">VS Processing</span>
-	</div>
 	<header>
 		<h1>${r}</h1>
 		<span class="by">by ${n}</span>
@@ -503,14 +541,20 @@ public class ${t} {
 		</button>
 	</header>
 	<main>
-		<div id="stage"><div id="sketch"></div></div>
+		<div id="stage">
+			<div id="sketch"></div>
+			<div id="boot">
+				${pa}
+				<span class="wordmark">VS Processing</span>
+			</div>
+		</div>
 		<pre id="console" hidden></pre>
 		<pre id="error" hidden></pre>
 	</main>
 	<dialog id="info">
 		<h2>${r}</h2>
 		<span class="by">by ${n}</span>
-		<p>${s||"No description provided."}</p>
+		<p class="description">${s||"No description provided."}</p>
 		<p class="made">Made with <a href="${da}" target="_blank" rel="noreferrer noopener">VS Processing</a></p>
 	</dialog>
 	<script type="module" src="./${gr}"><\/script>
