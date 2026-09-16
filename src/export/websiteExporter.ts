@@ -63,8 +63,8 @@ export class WebsiteExporter {
 
 		const compiled = await this.compileSketch(workspaceFolder);
 		await this.writeArtifacts(workspaceFolder.uri, compiled);
-		await this.writeRuntimeIfMissing(workspaceFolder.uri, compiled);
-		await this.writeIndexIfMissing(workspaceFolder.uri, name.trim(), footer);
+		await this.writeRuntime(workspaceFolder.uri, compiled);
+		await this.writeIndex(workspaceFolder.uri, name.trim(), footer);
 
 		this.log(`[export] Website export succeeded in ${Date.now() - startedAt}ms.`);
 		void vscode.window.showInformationMessage(vscode.l10n.t('Website export succeeded.'));
@@ -123,26 +123,34 @@ export class WebsiteExporter {
 		this.log(`[export] Wrote ${compiled.js.name}.`);
 	}
 
-	private async writeRuntimeIfMissing(root: vscode.Uri, compiled: WebsiteCompileOutput): Promise<void> {
+	/** The runtime is generated output and always matches the build it was exported with. */
+	private async writeRuntime(root: vscode.Uri, compiled: WebsiteCompileOutput): Promise<void> {
 		const uri = vscode.Uri.joinPath(root, runtimeName);
-		if (await exists(uri)) {
-			this.log(`[export] Skipped existing ${runtimeName}.`);
-			return;
-		}
-
+		const existed = await exists(uri);
 		await this.writeText(uri, await this.renderRuntime(compiled));
-		this.log(`[export] Created ${runtimeName}.`);
+		this.log(`[export] ${existed ? 'Updated' : 'Created'} ${runtimeName}.`);
 	}
 
-	private async writeIndexIfMissing(root: vscode.Uri, name: string, footer: string): Promise<void> {
+	/** Writes the page; an existing index.html may have been edited, so ask before replacing it. */
+	private async writeIndex(root: vscode.Uri, name: string, footer: string): Promise<void> {
 		const uri = vscode.Uri.joinPath(root, indexName);
 		if (await exists(uri)) {
-			this.log(`[export] Skipped existing ${indexName}.`);
-			return;
+			const replace = vscode.l10n.t('Replace');
+			const keep = vscode.l10n.t('Keep Existing');
+			const choice = await vscode.window.showWarningMessage(
+				vscode.l10n.t('{0} already exists. Replace it with a newly generated page?', indexName),
+				{ modal: true, detail: vscode.l10n.t('Any changes you made to {0} will be lost. The compiled sketch and {1} are updated either way.', indexName, runtimeName) },
+				replace,
+				keep
+			);
+			if (choice !== replace) {
+				this.log(`[export] Kept existing ${indexName}.`);
+				return;
+			}
 		}
 
 		await this.writeText(uri, this.renderIndex(name, footer));
-		this.log(`[export] Created ${indexName}.`);
+		this.log(`[export] Wrote ${indexName}.`);
 	}
 
 	private async renderRuntime(compiled: WebsiteCompileOutput): Promise<string> {
