@@ -139,7 +139,7 @@ export class WebsiteExporter {
 			const keep = vscode.l10n.t('Keep Existing');
 			const choice = await vscode.window.showWarningMessage(
 				vscode.l10n.t('{0} already exists. Replace it with a newly generated page?', indexName),
-				{ modal: true, detail: vscode.l10n.t('Any changes you made to {0} will be lost. The compiled sketch and {1} are updated either way.', indexName, runtimeName) },
+				{ modal: true, detail: vscode.l10n.t('Any changes you made to {0} will be lost.', indexName) },
 				replace,
 				keep
 			);
