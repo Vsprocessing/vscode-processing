@@ -610,15 +610,15 @@ export class WebsiteExporter {
 			background: #000;
 			color: #fff;
 		}
-		#boot.done { animation: boot-out .16s ease-in forwards; }
-		#boot svg { width: 46px; height: 46px; flex: none; animation: boot-logo .2s ease-out both; }
+		#boot.done { animation: boot-out .2s ease-in forwards; }
+		#boot svg { width: 46px; height: 46px; flex: none; animation: boot-logo .34s ease-out both; }
 		#boot .wordmark {
 			/* Expands to the right, which pushes the logo left into its final position. */
 			overflow: hidden;
 			white-space: nowrap;
 			font-size: 23px;
 			font-weight: 600;
-			animation: boot-wordmark .3s cubic-bezier(.2, .7, .3, 1) .2s both;
+			animation: boot-wordmark .46s cubic-bezier(.2, .7, .3, 1) .34s both;
 		}
 		@keyframes boot-logo {
 			from { opacity: 0; transform: scale(.9); }
