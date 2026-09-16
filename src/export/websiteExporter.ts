@@ -25,8 +25,8 @@ const bootLogoSvg = '<svg viewBox="10 -10 710 690" aria-hidden="true" fill="none
 interface PageDetails {
 	readonly name: string;
 	readonly author: string;
+	/** May contain line breaks, entered as `\n`. */
 	readonly description: string;
-	readonly footer: string;
 }
 
 interface WebsiteCompileOutput {
@@ -73,20 +73,11 @@ export class WebsiteExporter {
 		const description = await vscode.window.showInputBox({
 			title: vscode.l10n.t('Export Website'),
 			prompt: vscode.l10n.t('Description'),
+			placeHolder: vscode.l10n.t('Use \\n for a line break'),
 			value: '',
 			ignoreFocusOut: true
 		});
 		if (description === undefined) {
-			return;
-		}
-
-		const footer = await vscode.window.showInputBox({
-			title: vscode.l10n.t('Export Website'),
-			prompt: vscode.l10n.t('Footer text'),
-			value: '',
-			ignoreFocusOut: true
-		});
-		if (footer === undefined) {
 			return;
 		}
 
@@ -97,7 +88,7 @@ export class WebsiteExporter {
 		const compiled = await this.compileSketch(workspaceFolder);
 		await this.writeArtifacts(workspaceFolder.uri, compiled);
 		await this.writeRuntime(workspaceFolder.uri, compiled);
-		await this.writeIndex(workspaceFolder.uri, { name: name.trim(), author: author.trim() || anonymousAuthor, description: description.trim(), footer });
+		await this.writeIndex(workspaceFolder.uri, { name: name.trim(), author: author.trim() || anonymousAuthor, description: description.trim() });
 
 		this.log(`[export] Website export succeeded in ${Date.now() - startedAt}ms.`);
 		void vscode.window.showInformationMessage(vscode.l10n.t('Website export succeeded.'));
@@ -269,7 +260,7 @@ export class WebsiteExporter {
 		window.addEventListener('unhandledrejection', event => UI.showError(event.reason));
 	}
 
-	/** Scales the sketch canvas so the whole page, header and footer included, fits the window. */
+	/** Scales the sketch canvas so the whole page fits the window. */
 	function installCanvasFit(stage, mount) {
 		const fit = () => {
 			const canvas = mount.querySelector('canvas');
@@ -433,8 +424,7 @@ export class WebsiteExporter {
 	private renderIndex(page: PageDetails): string {
 		const title = escapeHtml(page.name);
 		const author = escapeHtml(page.author);
-		const description = escapeHtml(page.description);
-		const footerContent = escapeHtml(page.footer);
+		const description = escapeHtml(page.description.replace(/\\n/g, '\n'));
 		const debug = escapeHtml(`Built by Web Processing ${this.softwareVersion}.`);
 		return `<!doctype html>
 <html lang="en">
@@ -474,7 +464,7 @@ export class WebsiteExporter {
 			height: 100dvh;
 			overflow: hidden;
 			display: grid;
-			grid-template-rows: auto minmax(0, 1fr) auto;
+			grid-template-rows: auto minmax(0, 1fr);
 			background: var(--page-background);
 			color: var(--page-foreground);
 		}
@@ -548,13 +538,6 @@ export class WebsiteExporter {
 			border-top: 1px solid var(--error-border);
 			font: 12px/1.45 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 		}
-		footer {
-			padding: 8px 16px;
-			color: var(--muted-foreground);
-			font-size: 13px;
-			border-top: 1px solid var(--border-color);
-		}
-		footer:empty { display: none; }
 		dialog#info {
 			max-width: 420px;
 			padding: 20px;
@@ -566,7 +549,7 @@ export class WebsiteExporter {
 		dialog#info::backdrop { background: rgba(0, 0, 0, .45); }
 		dialog#info h2 { margin: 0; font-size: 18px; }
 		dialog#info .by { display: block; margin-top: 2px; }
-		dialog#info p { margin: 14px 0 0; line-height: 1.5; }
+		dialog#info p { margin: 14px 0 0; line-height: 1.5; white-space: pre-wrap; }
 		dialog#info .made {
 			margin-top: 18px;
 			padding-top: 12px;
@@ -633,7 +616,6 @@ export class WebsiteExporter {
 		<pre id="console" hidden></pre>
 		<pre id="error" hidden></pre>
 	</main>
-	<footer>${footerContent}</footer>
 	<dialog id="info">
 		<h2>${title}</h2>
 		<span class="by">by ${author}</span>
