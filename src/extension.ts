@@ -7,6 +7,8 @@ import type { CompileCheck, CsptAssignment, CsptCheckResult, ValidatorCheck } fr
 import { ProcessingLinter } from './java-lsp/processingLsp';
 import { teavmPackageUri } from './compiler/teavmPackage';
 import { AssignmentViewProvider } from './views/assignmentView';
+import { ProcessingCompiler } from './compiler/processingCompiler';
+import { WebsiteExporter } from './export/websiteExporter';
 import {
 	buildArtifactFileName, buildArtifactFileUri, collectSources, countLines,
 	createNonce, escapeScriptJson, formatDiagnostic, formatDuration,
@@ -23,6 +25,7 @@ const runCommand = 'webprocessing.run';
 const stopCommand = 'webprocessing.stop';
 const openReferenceCommand = 'webprocessing.openReference';
 const openApcsaReferenceCommand = 'webprocessing.openApcsaReference';
+const exportWebsiteCommand = 'webprocessing.exportWebsite';
 const refreshAssignmentsCommand = 'webprocessing.refreshAssignments';
 const controlsViewType = 'webprocessing.controls';
 const runtimeViewType = 'webruntime';
@@ -32,7 +35,7 @@ const defaultOpenStateKey = 'webprocessing.defaultOpen.v1';
 const defaultAssignmentStoreUrls = ['https://vsp-cspt-store.cloudtron.us/'];
 // Temporarily hidden features; set to true to re-enable their UI.
 const assignmentsEnabled = false;
-const exportWebsiteEnabled = false;
+const exportWebsiteEnabled = true;
 
 type ProcessingModule = typeof processingCompilerPackage;
 type CompilerModule = typeof javaCompilerPackage;
@@ -168,6 +171,7 @@ class Extension implements vscode.Disposable {
 	private readonly linter: ProcessingLinter;
 	private readonly assignmentViewProvider: AssignmentViewProvider;
 	private readonly assignmentBrowserProvider: AssignmentBrowserProvider;
+	private readonly exporter: WebsiteExporter;
 	private runtimePanel: ProcessingRuntimePanel | undefined;	// runtime panel
 	private referencePanel: ProcessingReferencePanel | undefined;
 	private javaRuntimeWorker: Worker | undefined;
@@ -185,6 +189,12 @@ class Extension implements vscode.Disposable {
 		this.controlsProvider = new ExtensionControlsProvider(this.context.extensionUri, this);
 		this.linter = new ProcessingLinter(context);
 		this.assignmentViewProvider = new AssignmentViewProvider(context.extensionUri, this);
+		this.exporter = new WebsiteExporter(
+			context.extensionUri,
+			new ProcessingCompiler(context.extensionUri, message => this.log(message)),
+			String(context.extension.packageJSON.version ?? ''),
+			message => this.log(message)
+		);
 		this.assignmentBrowserProvider = new AssignmentBrowserProvider(context.extensionUri, {
 			getState: () => this.getAssignmentBrowserState(),
 			openAssignment: id => this.openCatalogAssignment(id)
@@ -204,6 +214,7 @@ class Extension implements vscode.Disposable {
 		this.disposables.push(vscode.commands.registerCommand(compileCommand, () => this.compile()));
 		this.disposables.push(vscode.commands.registerCommand(runCommand, () => this.run()));
 		this.disposables.push(vscode.commands.registerCommand(stopCommand, () => this.stop()));
+		this.disposables.push(vscode.commands.registerCommand(exportWebsiteCommand, () => this.exportWebsite()));
 		this.disposables.push(vscode.commands.registerCommand(openReferenceCommand, () => this.openReference()));
 		this.disposables.push(vscode.commands.registerCommand(openApcsaReferenceCommand, () => this.openApcsaReference()));
 		this.disposables.push(vscode.commands.registerCommand(refreshAssignmentsCommand, () => this.loadAssignmentCatalog()));
@@ -659,6 +670,25 @@ class Extension implements vscode.Disposable {
 			await vscode.workspace.fs.createDirectory(folder);
 		}
 		await vscode.workspace.fs.writeFile(uri, bytes);
+	}
+
+	/** Compiles the sketch to WebAssembly and JavaScript and writes a standalone website next to it. */
+	async exportWebsite(): Promise<void> {
+		if (this.compiling || this.running) {
+			return;
+		}
+		this.setCompiling(true);
+		this.showOutput();
+		this.output.clear();
+		try {
+			await this.exporter.export();
+		} catch (error) {
+			const message = error instanceof Error ? error.message : String(error);
+			this.log(`[export] ${message}`);
+			void vscode.window.showErrorMessage(vscode.l10n.t('Website export failed: {0}', message));
+		} finally {
+			this.setCompiling(false);
+		}
 	}
 
 	async compile(): Promise<void> {
@@ -1125,6 +1155,7 @@ type controlsMessage =
 	| { readonly type: 'compile' }
 	| { readonly type: 'run' }
 	| { readonly type: 'stop' }
+	| { readonly type: 'exportWebsite' }
 	| { readonly type: 'openAssignments' }
 	| { readonly type: 'openReference' }
 	| { readonly type: 'openApcsaReference' }
@@ -1159,6 +1190,9 @@ class ExtensionControlsProvider implements vscode.WebviewViewProvider {
 				break;
 			case 'stop':
 				this.controller.stop();
+				break;
+			case 'exportWebsite':
+				void this.controller.exportWebsite();
 				break;
 			case 'openAssignments':
 				void this.controller.openAssignmentBrowser();
